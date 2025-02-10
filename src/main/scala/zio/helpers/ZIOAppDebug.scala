@@ -1,4 +1,4 @@
-package helpers
+package zio.helpers
 
 import zio.*
 

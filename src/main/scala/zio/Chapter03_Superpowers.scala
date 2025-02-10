@@ -1,4 +1,4 @@
-package Chapter03_Superpowers
+package zio.Chapter03_Superpowers
 
 import zio.*
 import zio.direct.*

@@ -502,12 +502,8 @@ Failed: $failed
   // Failed: 81
 
 
-import nl.vroste.rezilience.{
-  CircuitBreaker,
-  TrippingStrategy,
-  Retry,
-}
-import TrippingStrategy.failureCount
+import nl.vroste.rezilience.TrippingStrategy.failureCount
+import nl.vroste.rezilience.{CircuitBreaker, Retry, TrippingStrategy}
 
 val circuitBreakerZ =
   CircuitBreaker.make(
