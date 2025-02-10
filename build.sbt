@@ -14,6 +14,10 @@ libraryDependencies ++= Seq(
   "nl.vroste" %% "rezilience" % "0.10.3",
   "dev.zio" %% "zio-test" % zioVersion % Test,
   "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+
+  // CE3
+  "org.typelevel" %% "cats-effect" % "3.5.7",
+  "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
 )
 
 fork := true
@@ -29,12 +33,12 @@ initialize := {
 lazy val runMainClassesDoesNotTolerateFailures = taskKey[Unit]("Print main classes")
 runMainClassesDoesNotTolerateFailures := Def.taskDyn {
   val s: TaskStreams = streams.value
-  val classes = (Compile/discoveredMainClasses).value
+  val classes = (Compile / discoveredMainClasses).value
   val tasks = classes.map { className =>
     Def.task {
       try {
         s.log.info(s"Running $className")
-        (Compile/runMain).toTask(" " + className).value
+        (Compile / runMain).toTask(" " + className).value
       } catch {
         case e: Exception =>
           s.log.error(s"Failure when running $className: ${e.getMessage}")
@@ -49,9 +53,9 @@ lazy val runMainClassesToleratesFailures = taskKey[Unit]("Run all main classes")
 
 runMainClassesToleratesFailures := {
   val log = streams.value.log
-  val discovered: Seq[String] = (Compile/discoveredMainClasses).value
+  val discovered: Seq[String] = (Compile / discoveredMainClasses).value
   // Get the classpath
-  val classpath = Attributed.data((Compile/fullClasspath).value).mkString(java.io.File.pathSeparator)
+  val classpath = Attributed.data((Compile / fullClasspath).value).mkString(java.io.File.pathSeparator)
 
   discovered.foreach { className =>
     log.info(s"Running $className")
