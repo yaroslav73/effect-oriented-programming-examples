@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
 
   // CE3
   "org.typelevel" %% "cats-effect" % "3.5.7",
+  "org.typelevel" %% "cats-core" % "2.13.0",
   "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
 )
 
