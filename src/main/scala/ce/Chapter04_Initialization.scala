@@ -1,6 +1,9 @@
 package ce.Chapter04_Initialization
 
 import cats.effect.{IO, Ref, Resource}
+import ce.extensions.*
+import pureconfig.*
+import pureconfig.generic.derivation.*
 
 trait Bread:
   val eat: IO[Unit] = IO.println("Bread: Eating")
@@ -125,11 +128,10 @@ object Friend:
       IO.raiseError(new Exception("Friend Unreachable"))
         .as(BreadFromFriend())
 
-  def requestBread: IO[BreadFromFriend] =
+  def requestBread(retry: Ref[IO, Int]): IO[BreadFromFriend] =
     val worksOnAttempt = 4
     for
-      invocations <- Ref.of[IO, Int](0)
-      curInvocations <- invocations.updateAndGet(_ + 1)
+      curInvocations <- retry.updateAndGet(_ + 1)
       bread <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
       else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend())
     yield bread
@@ -138,8 +140,62 @@ end Friend
 
 object App4 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
-    eatBread(Friend.requestBread)
+    for
+      retry <- Ref.of[IO, Int](0)
+      bread = Friend.requestBread(retry)
+      _ <- eatBread(bread)
+    yield ()
 
 object App5 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
-    eatBread(Friend.requestBread.orElse(Bread.storeBought))
+    for
+      retry <- Ref.of[IO, Int](0)
+      bread = Friend.requestBread(retry).orElse(Bread.storeBought)
+      _ <- eatBread(bread)
+    yield ()
+//    eatBread(Friend.requestBread.orElse(Bread.storeBought))
+
+object App6 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    for
+      retry <- Ref.of[IO, Int](0)
+      bread = Friend.requestBread(retry)
+      _ <- eatBread(bread).retryN(1)
+    yield () //eatBread(bread)).retryN(1)
+
+final case class RetryConfig(times: Int)derives ConfigReader
+
+val configurableBread: (Ref[IO, Int], RetryConfig) => IO[Bread] =
+  (retry, config) => Friend.requestBread(retry).retryN(config.times)
+
+object App7 extends ce.helpers.IOAppDebug:
+  val retryTwice: RetryConfig = RetryConfig(2)
+
+  def run: IO[Any] =
+    for
+      retry <- Ref.of[IO, Int](0)
+      bread = configurableBread(retry, retryTwice)
+      _ <- eatBread(bread)
+    yield ()
+//    eatBread(configurableBread(retryTwice))
+
+val configSource =
+  ConfigSource
+    .string("{ times: 3 }")
+    .load[RetryConfig]
+
+val configuration =
+  configSource match
+    case Right(config) => IO(config)
+    case Left(failure) => IO.raiseError(new Exception(failure.toString))
+
+object App8 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    for
+      retry  <- Ref.of[IO, Int](0)
+      config <- configuration
+      bread  = configurableBread(retry, config)
+      _      <- eatBread(bread)
+    yield ()
+//    eatBread(configuration.flatMap(configurableBread))
+
