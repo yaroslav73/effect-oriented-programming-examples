@@ -19,10 +19,6 @@ val storeBoughtBread =
 val eatBread: IO[Bread] => IO[Unit] =
   bread => bread.flatMap(_.eat)
 
-// or with def
-//def eatBread(bread: IO[Bread]): IO[Unit] =
-//  bread.flatMap(_.eat)
-
 object App0 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     eatBread:
@@ -77,7 +73,7 @@ object ToastFromHeatSource:
   val toasted: (IO[HeatSource], IO[Bread]) => IO[ToastFromHeatSource] =
     (heat, bread) =>
       for
-        bread <- bread //Bread.storeBought // TODO: pass bread home or bought
+        bread <- bread
         heat <- heat
         _ <- IO.println("Toast: Made")
       yield ToastFromHeatSource(bread, heat)
@@ -107,7 +103,6 @@ object OvenSafe:
     IO.println("Oven: Heated")
       .as(Oven())
       .guarantee(IO.println("Oven: Turning off"))
-// TODO: try to use Resource
 
 // Skip App3 zio, it's the same as App2 but with ZLayer.Debug.Tree
 object App3 extends ce.helpers.IOAppDebug:
@@ -153,7 +148,6 @@ object App5 extends ce.helpers.IOAppDebug:
       bread = Friend.requestBread(retry).orElse(Bread.storeBought)
       _ <- eatBread(bread)
     yield ()
-//    eatBread(Friend.requestBread.orElse(Bread.storeBought))
 
 object App6 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
@@ -161,7 +155,7 @@ object App6 extends ce.helpers.IOAppDebug:
       retry <- Ref.of[IO, Int](0)
       bread = Friend.requestBread(retry)
       _ <- eatBread(bread).retryN(1)
-    yield () //eatBread(bread)).retryN(1)
+    yield ()
 
 final case class RetryConfig(times: Int)derives ConfigReader
 
@@ -177,7 +171,6 @@ object App7 extends ce.helpers.IOAppDebug:
       bread = configurableBread(retry, retryTwice)
       _ <- eatBread(bread)
     yield ()
-//    eatBread(configurableBread(retryTwice))
 
 val configSource =
   ConfigSource
@@ -192,10 +185,9 @@ val configuration =
 object App8 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
-      retry  <- Ref.of[IO, Int](0)
+      retry <- Ref.of[IO, Int](0)
       config <- configuration
-      bread  = configurableBread(retry, config)
-      _      <- eatBread(bread)
+      bread = configurableBread(retry, config)
+      _ <- eatBread(bread)
     yield ()
-//    eatBread(configuration.flatMap(configurableBread))
 
