@@ -1,6 +1,6 @@
 package ce.extensions
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 
 import scala.language.postfixOps
 
@@ -21,3 +21,12 @@ extension [A](io: IO[A])
 
   def when(p: => Boolean): IO[Option[A]] =
     if (p) io.map(Some(_)) else IO.none
+end extension
+
+extension [A](resource: Resource[IO, A])
+  def retryN(n: => Int): Resource[IO, A] =
+    resource.handleErrorWith[A, Throwable] { e =>
+      if (n > 0) resource.retryN(n - 1)
+      else Resource.eval(IO.raiseError(e))
+    }
+end extension

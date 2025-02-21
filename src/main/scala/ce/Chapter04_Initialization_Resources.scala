@@ -46,8 +46,6 @@ object BreadHomeMade:
       _ <- IO.println("BreadHomeMade: Baked").toResource
     yield BreadHomeMade(heat, dough)
 
-//val homeMadeBread = BreadHomeMade.make(Oven.heated, Dough.fresh)
-
 object App1 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     val breadHomeMade = for
@@ -120,79 +118,96 @@ object App3 extends ce.helpers.IOAppDebug:
 
     homeMadeBread.use(eatBread)
 
-//class BreadFromFriend extends Bread
-//
-//object Friend:
-//  def forcedFailure(invocations: Int): IO[BreadFromFriend] =
-//    IO.println(s"Attempt $invocations: Failure(Friend Unreachable)") *>
-//      IO.raiseError(new Exception("Friend Unreachable"))
-//        .as(BreadFromFriend())
-//
-//  def requestBread(retry: Ref[IO, Int]): IO[BreadFromFriend] =
-//    val worksOnAttempt = 4
-//    for
-//      curInvocations <- retry.updateAndGet(_ + 1)
-//      bread <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
-//      else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend())
-//    yield bread
-//  end requestBread
-//end Friend
-//
-//object App4 extends ce.helpers.IOAppDebug:
-//  def run: IO[Any] =
-//    for
-//      retry <- Ref.of[IO, Int](0)
-//      bread = Friend.requestBread(retry)
-//      _ <- eatBread(bread)
-//    yield ()
-//
-//object App5 extends ce.helpers.IOAppDebug:
-//  def run: IO[Any] =
-//    for
-//      retry <- Ref.of[IO, Int](0)
-//      bread = Friend.requestBread(retry).orElse(Bread.storeBought)
-//      _ <- eatBread(bread)
-//    yield ()
-//
-//object App6 extends ce.helpers.IOAppDebug:
-//  def run: IO[Any] =
-//    for
-//      retry <- Ref.of[IO, Int](0)
-//      bread = Friend.requestBread(retry)
-//      _ <- eatBread(bread).retryN(1)
-//    yield ()
-//
-//final case class RetryConfig(times: Int)derives ConfigReader
-//
-//val configurableBread: (Ref[IO, Int], RetryConfig) => IO[Bread] =
-//  (retry, config) => Friend.requestBread(retry).retryN(config.times)
-//
-//object App7 extends ce.helpers.IOAppDebug:
-//  val retryTwice: RetryConfig = RetryConfig(2)
-//
-//  def run: IO[Any] =
-//    for
-//      retry <- Ref.of[IO, Int](0)
-//      bread = configurableBread(retry, retryTwice)
-//      _ <- eatBread(bread)
-//    yield ()
-//
-//val configSource =
-//  ConfigSource
-//    .string("{ times: 3 }")
-//    .load[RetryConfig]
-//
-//val configuration =
-//  configSource match
-//    case Right(config) => IO(config)
-//    case Left(failure) => IO.raiseError(new Exception(failure.toString))
-//
-//object App8 extends ce.helpers.IOAppDebug:
-//  def run: IO[Any] =
-//    for
-//      retry <- Ref.of[IO, Int](0)
-//      config <- configuration
-//      bread = configurableBread(retry, config)
-//      _ <- eatBread(bread)
-//    yield ()
+class BreadFromFriend extends Bread
+
+object Friend:
+  def forcedFailure(invocations: Int): Resource[IO, BreadFromFriend] =
+    Resource.eval(
+      IO.println(s"Attempt $invocations: Failure(Friend Unreachable)") *>
+        IO.raiseError(new Exception("Friend Unreachable")).as(BreadFromFriend())
+    )
+
+  def requestBread(retry: Ref[IO, Int]): Resource[IO, BreadFromFriend] =
+    val worksOnAttempt = 4
+    for
+      curInvocations <- retry.updateAndGet(_ + 1).toResource
+      bread <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
+      else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend()).toResource
+    yield bread
+  end requestBread
+end Friend
+
+object RetryCounter:
+  def apply(): Resource[IO, Ref[IO, Int]] =
+    Resource.eval(Ref.of[IO, Int](0))
+
+object App4 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    val breadFromFriend =
+      for
+        retry <- RetryCounter()
+        bread <- Friend.requestBread(retry)
+      yield bread
+
+    breadFromFriend.use(eatBread)
+
+object App5 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    val breadFromFriend =
+      for
+        retry <- RetryCounter()
+        bread <- Friend.requestBread(retry).handleErrorWith[Bread, Throwable](_ => Bread.storeBought)
+      yield bread
+
+    breadFromFriend.use(eatBread)
+
+object App6 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    val breadFromFriend = for
+      retry <- RetryCounter()
+      bread <- Friend.requestBread(retry).retryN(1)
+    yield bread
+
+    breadFromFriend.use(eatBread)
+
+final case class RetryConfig(times: Int)derives ConfigReader
+
+val configurableBread: (Ref[IO, Int], RetryConfig) => Resource[IO, Bread] =
+  (retry, config) => Friend.requestBread(retry).retryN(config.times)
+
+object App7 extends ce.helpers.IOAppDebug:
+  val retryTwice: RetryConfig = RetryConfig(2)
+
+  def run: IO[Any] =
+    val configBread = for
+      retry <- RetryCounter()
+      bread <- configurableBread(retry, retryTwice)
+    yield bread
+
+    configBread.use(eatBread)
+
+val configSource =
+  Resource.eval(
+    IO(
+      ConfigSource
+        .string("{ times: 3 }")
+        .load[RetryConfig]
+    )
+  )
+
+val configuration =
+  configSource.flatMap {
+    case Right(config) => Resource.pure(config)
+    case Left(failure) => Resource.eval(IO.raiseError(new Exception(failure.toString)))
+  }
+
+object App8 extends ce.helpers.IOAppDebug:
+  def run: IO[Any] =
+    val configBread = for
+      retry <- RetryCounter()
+      config <- configuration
+      bread <- configurableBread(retry, config)
+    yield bread
+
+    configBread.use(eatBread)
 
