@@ -1,6 +1,7 @@
-package ce.Chapter04_Initialization
+package ce.chapters.ch04.io
 
 import cats.effect.{IO, Ref, Resource}
+import ce.chapters.ch04.*
 import ce.extensions.*
 import pureconfig.*
 import pureconfig.generic.derivation.*

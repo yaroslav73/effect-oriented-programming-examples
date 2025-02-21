@@ -1,9 +1,9 @@
-package ce.Chapter03_Superpowers
+package ce.chapters.ch03
 
-import cats.effect.{IO, IOApp, Ref}
 import cats.effect.unsafe.implicits.global
-import ce.helpers.IOAppDebug
+import cats.effect.{IO, IOApp, Ref}
 import ce.extensions.*
+import ce.helpers.IOAppDebug
 
 import scala.concurrent.duration.DurationInt
 

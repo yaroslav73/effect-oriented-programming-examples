@@ -1,6 +1,8 @@
-package ce
+package ce.chapters.ch04.res
 
 import cats.effect.{IO, Ref, Resource}
+import ce.*
+import ce.chapters.ch04.res.*
 import ce.extensions.*
 import pureconfig.*
 import pureconfig.generic.derivation.*
