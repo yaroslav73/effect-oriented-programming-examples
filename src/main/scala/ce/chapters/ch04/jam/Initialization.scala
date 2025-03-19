@@ -1,4 +1,4 @@
-package ce.chapters.ch04.res
+package ce.chapters.ch04.jam
 
 import cats.effect.{IO, Ref, Resource}
 import ce.*
@@ -44,13 +44,14 @@ class BreadHomeMade(heat: HeatSource, dough: Dough) extends Bread
 
 object BreadHomeMade:
   def make(heat: Oven, dough: Dough): Resource[IO, BreadHomeMade] =
-    for _ <- IO.println("BreadHomeMade: Baked").toResource
+    for
+      _ <- IO.println("BreadHomeMade: Baked").toResource
     yield BreadHomeMade(heat, dough)
 
 object App1 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     val breadHomeMade = for
-      oven  <- Oven.heated
+      oven <- Oven.heated
       dough <- Dough.fresh
       bread <- BreadHomeMade.make(oven, dough)
     yield bread
@@ -58,7 +59,7 @@ object App1 extends ce.helpers.IOAppDebug:
     breadHomeMade.use(eatBread)
 
 object Bread:
-  val storeBought: Resource[IO, BreadStoreBought]            = storeBoughtBread
+  val storeBought: Resource[IO, BreadStoreBought] = storeBoughtBread
   val homeMade: (Oven, Dough) => Resource[IO, BreadHomeMade] =
     (oven, dough) => BreadHomeMade.make(oven, dough)
 
@@ -74,8 +75,8 @@ object ToastFromHeatSource:
     (heat, bread) =>
       for
         bread <- bread
-        heat  <- heat
-        _     <- IO.println("Toast: Made")
+        heat <- heat
+        _ <- IO.println("Toast: Made")
       yield ToastFromHeatSource(bread, heat)
 
 class Toaster extends HeatSource
@@ -88,17 +89,18 @@ final case class ToastFromToaster(bread: Bread, heat: HeatSource) extends Toast
 object ToastFromToaster:
   val toasted: (Bread, HeatSource) => Resource[IO, ToastFromToaster] =
     (bread, heat) =>
-      for _ <- IO.println("Toast: Made").toResource
+      for
+        _ <- IO.println("Toast: Made").toResource
       yield ToastFromToaster(bread, heat)
 
 object App2 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     val homeMadeToast = for
       toaster <- Toaster.ready
-      dough   <- Dough.fresh
-      heat    <- Oven.heated
-      bread   <- Bread.homeMade(heat, dough)
-      toast   <- ToastFromToaster.toasted(bread, toaster)
+      dough <- Dough.fresh
+      heat <- Oven.heated
+      bread <- Bread.homeMade(heat, dough)
+      toast <- ToastFromToaster.toasted(bread, toaster)
     yield toast
 
     homeMadeToast.use(_.eat)
@@ -111,7 +113,7 @@ object OvenSafe:
 object App3 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     val homeMadeBread = for
-      heat  <- OvenSafe.heated
+      heat <- OvenSafe.heated
       dough <- Dough.fresh
       bread <- Bread.homeMade(heat, dough)
     yield bread
@@ -124,15 +126,15 @@ object Friend:
   def forcedFailure(invocations: Int): Resource[IO, BreadFromFriend] =
     Resource.eval(
       IO.println(s"Attempt $invocations: Failure(Friend Unreachable)") *>
-        IO.raiseError(new Exception("Friend Unreachable")).as(BreadFromFriend()),
+        IO.raiseError(new Exception("Friend Unreachable")).as(BreadFromFriend())
     )
 
   def requestBread(retry: Ref[IO, Int]): Resource[IO, BreadFromFriend] =
     val worksOnAttempt = 4
     for
       curInvocations <- retry.updateAndGet(_ + 1).toResource
-      bread          <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
-                        else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend()).toResource
+      bread <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
+      else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend()).toResource
     yield bread
   end requestBread
 end Friend
@@ -170,7 +172,7 @@ object App6 extends ce.helpers.IOAppDebug:
 
     breadFromFriend.use(eatBread)
 
-final case class RetryConfig(times: Int) derives ConfigReader
+final case class RetryConfig(times: Int)derives ConfigReader
 
 val configurableBread: (Ref[IO, Int], RetryConfig) => Resource[IO, Bread] =
   (retry, config) => Friend.requestBread(retry).retryN(config.times)
@@ -191,8 +193,8 @@ val configSource =
     IO(
       ConfigSource
         .string("{ times: 3 }")
-        .load[RetryConfig],
-    ),
+        .load[RetryConfig]
+    )
   )
 
 val configuration =
@@ -204,9 +206,10 @@ val configuration =
 object App8 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     val configBread = for
-      retry  <- RetryCounter()
+      retry <- RetryCounter()
       config <- configuration
-      bread  <- configurableBread(retry, config)
+      bread <- configurableBread(retry, config)
     yield bread
 
     configBread.use(eatBread)
+

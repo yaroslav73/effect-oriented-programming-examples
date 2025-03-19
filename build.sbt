@@ -5,20 +5,23 @@ scalaVersion := "3.5.0"
 val zioVersion = "2.1.9"
 
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio" % zioVersion,
-  "dev.zio" %% "zio-direct" % "1.0.0-RC7",
-  "dev.zio" %% "zio-config" % "4.0.2",
-  "dev.zio" %% "zio-config-magnolia" % "4.0.2",
-  "dev.zio" %% "zio-config-typesafe" % "4.0.2",
-  "dev.zio" %% "zio-cache" % "0.2.3",
-  "nl.vroste" %% "rezilience" % "0.10.3",
-  "dev.zio" %% "zio-test" % zioVersion % Test,
-  "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+  "dev.zio"   %% "zio"                 % zioVersion,
+  "dev.zio"   %% "zio-direct"          % "1.0.0-RC7",
+  "dev.zio"   %% "zio-config"          % "4.0.2",
+  "dev.zio"   %% "zio-config-magnolia" % "4.0.2",
+  "dev.zio"   %% "zio-config-typesafe" % "4.0.2",
+  "dev.zio"   %% "zio-cache"           % "0.2.3",
+  "nl.vroste" %% "rezilience"          % "0.10.3",
+  "dev.zio"   %% "zio-test"            % zioVersion % Test,
+  "dev.zio"   %% "zio-test-sbt"        % zioVersion % Test,
 
   // CE3
-  "org.typelevel" %% "cats-effect" % "3.5.7",
-  "org.typelevel" %% "cats-core" % "2.13.0",
+  "org.typelevel"         %% "cats-effect"     % "3.5.7",
+  "org.typelevel"         %% "cats-core"       % "2.13.0",
   "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
+
+  // JAM for DI
+  "com.github.yakivy" %% "jam-core" % "0.4.5",
 )
 
 fork := true
@@ -27,15 +30,15 @@ fork := true
 initialize := {
   initialize.value
   val required = VersionNumber("11")
-  val current = VersionNumber(sys.props("java.specification.version"))
+  val current  = VersionNumber(sys.props("java.specification.version"))
   assert(current.get(0).get >= required.get(0).get, s"Java $required or above required")
 }
 
 lazy val runMainClassesDoesNotTolerateFailures = taskKey[Unit]("Print main classes")
 runMainClassesDoesNotTolerateFailures := Def.taskDyn {
   val s: TaskStreams = streams.value
-  val classes = (Compile / discoveredMainClasses).value
-  val tasks = classes.map { className =>
+  val classes        = (Compile / discoveredMainClasses).value
+  val tasks          = classes.map { className =>
     Def.task {
       try {
         s.log.info(s"Running $className")
@@ -53,10 +56,10 @@ runMainClassesDoesNotTolerateFailures := Def.taskDyn {
 lazy val runMainClassesToleratesFailures = taskKey[Unit]("Run all main classes")
 
 runMainClassesToleratesFailures := {
-  val log = streams.value.log
+  val log                     = streams.value.log
   val discovered: Seq[String] = (Compile / discoveredMainClasses).value
   // Get the classpath
-  val classpath = Attributed.data((Compile / fullClasspath).value).mkString(java.io.File.pathSeparator)
+  val classpath               = Attributed.data((Compile / fullClasspath).value).mkString(java.io.File.pathSeparator)
 
   discovered.foreach { className =>
     log.info(s"Running $className")

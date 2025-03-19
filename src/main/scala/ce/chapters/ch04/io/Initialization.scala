@@ -50,9 +50,9 @@ object BreadHomeMade:
 
 val homeMadeBread: IO[BreadHomeMade] =
   for
-    heat <- Oven.heated
+    heat  <- Oven.heated
     dough <- Dough.fresh
-    _ <- IO.println("BreadHomeMade: Baked")
+    _     <- IO.println("BreadHomeMade: Baked")
   yield BreadHomeMade(heat, dough)
 
 object App1 extends ce.helpers.IOAppDebug:
@@ -61,7 +61,7 @@ object App1 extends ce.helpers.IOAppDebug:
 
 object Bread:
   val storeBought: IO[BreadStoreBought] = storeBoughtBread
-  val homeMade: IO[BreadHomeMade] = homeMadeBread
+  val homeMade: IO[BreadHomeMade]       = homeMadeBread
 
 trait Toast:
   val bread: Bread
@@ -75,8 +75,8 @@ object ToastFromHeatSource:
     (heat, bread) =>
       for
         bread <- bread
-        heat <- heat
-        _ <- IO.println("Toast: Made")
+        heat  <- heat
+        _     <- IO.println("Toast: Made")
       yield ToastFromHeatSource(bread, heat)
 
 class Toaster extends HeatSource
@@ -115,7 +115,6 @@ object App3 extends ce.helpers.IOAppDebug:
 // Bread: Eating
 // Oven: Turning off
 
-
 class BreadFromFriend extends Bread
 
 object Friend:
@@ -128,8 +127,8 @@ object Friend:
     val worksOnAttempt = 4
     for
       curInvocations <- retry.updateAndGet(_ + 1)
-      bread <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
-      else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend())
+      bread          <- if curInvocations < worksOnAttempt then forcedFailure(curInvocations)
+                        else IO.println(s"Attempt $curInvocations: Succeeded").as(BreadFromFriend())
     yield bread
   end requestBread
 end Friend
@@ -138,27 +137,27 @@ object App4 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
       retry <- Ref.of[IO, Int](0)
-      bread = Friend.requestBread(retry)
-      _ <- eatBread(bread)
+      bread  = Friend.requestBread(retry)
+      _     <- eatBread(bread)
     yield ()
 
 object App5 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
       retry <- Ref.of[IO, Int](0)
-      bread = Friend.requestBread(retry).orElse(Bread.storeBought)
-      _ <- eatBread(bread)
+      bread  = Friend.requestBread(retry).orElse(Bread.storeBought)
+      _     <- eatBread(bread)
     yield ()
 
 object App6 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
       retry <- Ref.of[IO, Int](0)
-      bread = Friend.requestBread(retry)
-      _ <- eatBread(bread).retryN(1)
+      bread  = Friend.requestBread(retry)
+      _     <- eatBread(bread).retryN(1)
     yield ()
 
-final case class RetryConfig(times: Int)derives ConfigReader
+final case class RetryConfig(times: Int) derives ConfigReader
 
 val configurableBread: (Ref[IO, Int], RetryConfig) => IO[Bread] =
   (retry, config) => Friend.requestBread(retry).retryN(config.times)
@@ -169,8 +168,8 @@ object App7 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
       retry <- Ref.of[IO, Int](0)
-      bread = configurableBread(retry, retryTwice)
-      _ <- eatBread(bread)
+      bread  = configurableBread(retry, retryTwice)
+      _     <- eatBread(bread)
     yield ()
 
 val configSource =
@@ -186,9 +185,8 @@ val configuration =
 object App8 extends ce.helpers.IOAppDebug:
   def run: IO[Any] =
     for
-      retry <- Ref.of[IO, Int](0)
+      retry  <- Ref.of[IO, Int](0)
       config <- configuration
-      bread = configurableBread(retry, config)
-      _ <- eatBread(bread)
+      bread   = configurableBread(retry, config)
+      _      <- eatBread(bread)
     yield ()
-
