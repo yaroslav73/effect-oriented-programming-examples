@@ -21,7 +21,9 @@ libraryDependencies ++= Seq(
   "com.github.pureconfig" %% "pureconfig-core" % "0.17.8",
 
   // JAM for DI
-  "com.github.yakivy" %% "jam-core" % "0.4.5",
+  "com.github.yakivy" %% "jam-core"  % "0.4.5",
+  "com.github.yakivy" %% "jam-cats"  % "0.4.5",
+  "com.github.yakivy" %% "jam-monad" % "0.4.5",
 )
 
 fork := true
