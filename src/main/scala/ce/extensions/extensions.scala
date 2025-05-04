@@ -21,6 +21,12 @@ extension [A](io: IO[A])
 
   def when(p: => Boolean): IO[Option[A]] =
     if (p) io.map(Some(_)) else IO.none
+
+  def flip: IO[Any] =
+    io.attempt.flatMap {
+      case Right(value) => IO(value)
+      case Left(error)  => IO(error.getMessage)
+    }
 end extension
 
 extension [A](resource: Resource[IO, A])
